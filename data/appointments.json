@@ -1,0 +1,20 @@
+[
+    {
+        "id": 2,
+        "name": "Joana Silva",
+        "description": "Manicure e Pedicure",
+        "date": "2026-10-16",
+        "startTime": "10:00",
+        "endTime": "11:00",
+        "status": "scheduled"
+    },
+    {
+        "id": 3,
+        "name": "Larissa Souza",
+        "description": "Manicure",
+        "date": "2026-10-15",
+        "startTime": "15:00",
+        "endTime": "15:30",
+        "status": "scheduled"
+    }
+]
