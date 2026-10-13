@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Agendamento Clínico</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Clínica Médica - Central de Agendamentos</h1>
+    </header>
+
+    <div class="grid">
+      <!-- Formulário de Agendamento -->
+      <div class="card">
+        <h2>Novo Agendamento</h2>
+        <form id="agendamentoForm">
+          <div class="form-group">
+            <label for="paciente">Nome do Paciente</label>
+            <input type="text" id="paciente" required placeholder="Ex: Ana Souza">
+          </div>
+
+          <div class="form-group">
+            <label for="medico">Médico / Especialidade</label>
+            <select id="medico" required>
+              <option value="">Selecione...</option>
+              <option value="Dr. Carlos Eduardo (Cardiologia)">Dr. Carlos Eduardo (Cardiologia)</option>
+              <option value="Dra. Ana Beatriz (Dermatologia)">Dra. Ana Beatriz (Dermatologia)</option>
+              <option value="Dr. Roberto Lima (Ortopedia)">Dr. Roberto Lima (Ortopedia)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="data_hora">Data e Horário</label>
+            <input type="datetime-local" id="data_hora" required>
+          </div>
+
+          <button type="submit">Confirmar Agendamento</button>
+        </form>
+        <div id="feedback"></div>
+      </div>
+
+      <!-- Tabela de Consultas Agendadas -->
+      <div class="card">
+        <h2>Consultas Agendadas</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Paciente</th>
+              <th>Médico</th>
+              <th>Data/Hora</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaAgendamentos">
+            <!-- Preenchido via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Substitua a função carregarAgendamentos no index.html:
+async function carregarAgendamentos() {
+  try {
+    const res = await fetch('/api/agendamentos');
+    const dados = await res.json();
+    const tbody = document.getElementById('tabelaAgendamentos');
+    tbody.innerHTML = '';
+
+    dados.forEach(item => {
+      const tr = document.createElement('tr');
+      const dataFormatada = new Date(item.data_hora).toLocaleString('pt-BR');
+      
+      tr.innerHTML = `
+        <td>#${item.id}</td>
+        <td>${item.paciente}</td>
+        <td>${item.medico}</td>
+        <td>${dataFormatada}</td>
+        <td><span class="status-tag ${item.status.toLowerCase().replace(' ', '-')}">${item.status}</span></td>
+        <td>
+          <select onchange="atualizarStatus(${item.id}, this.value)">
+            <option value="Confirmado" ${item.status === 'Confirmado' ? 'selected' : ''}>Confirmado</option>
+            <option value="Em Espera" ${item.status === 'Em Espera' ? 'selected' : ''}>Em Espera (Recepção)</option>
+            <option value="Em Atendimento" ${item.status === 'Em Atendimento' ? 'selected' : ''}>Em Atendimento</option>
+            <option value="Concluído" ${item.status === 'Concluído' ? 'selected' : ''}>Concluído</option>
+            <option value="Faltou" ${item.status === 'Faltou' ? 'selected' : ''}>Faltou</option>
+          </select>
+          <button onclick="removerAgendamento(${item.id})" class="btn-danger">Excluir</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error('Erro ao carregar agendamentos:', err);
+  }
+}
+
+async function atualizarStatus(id, novoStatus) {
+  if (!novoStatus) return;
+  await fetch('/api/agendamentos', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: id, status: novoStatus })
+  });
+  carregarAgendamentos();
+}
+
+async function removerAgendamento(id) {
+  if (!confirm('Deseja realmente excluir este agendamento?')) return;
+  await fetch('/api/agendamentos', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: id })
+  });
+  carregarAgendamentos();
+}
+
+    document.getElementById('agendamentoForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const feedback = document.getElementById('feedback');
+      feedback.className = '';
+      feedback.style.display = 'none';
+
+      const payload = {
+        paciente: document.getElementById('paciente').value,
+        medico: document.getElementById('medico').value,
+        data_hora: document.getElementById('data_hora').value
+      };
+
+      try {
+        const res = await fetch('/api/agendamentos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+          feedback.textContent = 'Agendamento realizado com sucesso!';
+          feedback.className = 'success';
+          document.getElementById('agendamentoForm').reset();
+          carregarAgendamentos();
+        } else {
+          feedback.textContent = result.message || 'Erro ao agendar.';
+          feedback.className = 'error';
+        }
+      } catch (err) {
+        feedback.textContent = 'Erro de conexão com o servidor TCP.';
+        feedback.className = 'error';
+      }
+    });
+
+    // Carrega os agendamentos na inicialização
+    carregarAgendamentos();
+  </script>
+</body>
+</html>
